@@ -40,6 +40,21 @@ step('mdPreview.localResourceRootsOrigin', preview.includes('URI.parse(window.lo
 const katex = read('src/vs/workbench/contrib/markdown/browser/markedKatexSupport.ts');
 step('katex.prodOriginUrl', katex.includes('${origin}/katex/katex.min.css') || katex.includes('`/${origin}/katex') || katex.includes('/katex/katex.min.css'));
 
+// Relative images: without SW, asWebviewUri must not force vscode-cdn on Tauri file://.
+const asWebview = read('src/vs/workbench/contrib/webview/common/webview.ts');
+step(
+  'asWebviewUri.tauriFileUsesSidexAsset',
+  asWebview.includes("__SIDEX_TAURI__") &&
+    asWebview.includes('sidex-asset://localhost/') &&
+    asWebview.includes('Schemas.file')
+);
+step(
+  'csp.sidexAssetAllowed',
+  preview.includes('sidex-asset:') &&
+    srcPre.includes('sidex-asset:') &&
+    asWebview.includes('sidex-asset:')
+);
+
 const postbuild = read('scripts/postbuild.js');
 step('postbuild.syncWebviewPre', postbuild.includes('webview-pre') && postbuild.includes('WEBVIEW_PRE_SRC'));
 

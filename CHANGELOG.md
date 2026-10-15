@@ -3,6 +3,9 @@
 ## Unreleased — macOS Markdown Preview blank fix
 
 ### Fixed
+- **macOS Markdown Preview relative images** after the WKWebView service-worker
+  skip: `asWebviewUri(file://…)` now returns `sidex-asset://…` under Tauri so
+  local images load without the vscode-resource SW; CSP allows `sidex-asset:`.
 - **macOS: built-in Markdown Preview stayed blank.** Tauri on Mac uses WKWebView.
   After restoring `useHttpsScheme` (so the origin is `https://tauri.localhost`), the
   webview host tried to register a service worker and waited forever for
