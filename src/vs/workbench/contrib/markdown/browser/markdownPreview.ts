@@ -651,7 +651,8 @@ export class MarkdownPreviewManager extends Disposable {
 		const settings = this._getPreviewSettings();
 		// Prefer a same-origin /katex URL. asWebviewUri → vscode-cdn needs the
 		// webview service worker; on macOS WKWebView that SW is skipped so the
-		// CDN URL would 404 and math CSS would never load.
+		// CDN URL would 404 and math CSS would never load. Relative images use
+		// asWebviewUri too — on Tauri that now yields sidex-asset:// (no SW).
 		const katexStyles = katexExtension
 			? `<link rel="stylesheet" href="${katexStylesheetHref()}">`
 			: '';
@@ -687,7 +688,7 @@ export class MarkdownPreviewManager extends Disposable {
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src * data: blob:; media-src * data: blob:; font-src * data:; style-src * 'unsafe-inline'; script-src 'unsafe-inline';">
+	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src * data: blob: sidex-asset: asset:; media-src * data: blob: sidex-asset: asset:; font-src * data: sidex-asset:; style-src * 'unsafe-inline' sidex-asset:; script-src 'unsafe-inline';">
 	${katexStyles}
 	<style>${previewStyles}</style>
 	<style>${DEFAULT_MARKDOWN_STYLES}</style>

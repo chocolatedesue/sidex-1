@@ -24,7 +24,9 @@ export const webviewRootResourceAuthority = `vscode-resource.${webviewResourceBa
 
 export const webviewGenericCspSource =
 	`'self' https://*.${webviewResourceBaseHost}` +
-	((globalThis as any).__SIDEX_TAURI__ ? ' tauri: https://tauri.localhost https://*.tauri.localhost asset:' : '');
+	((globalThis as any).__SIDEX_TAURI__
+		? ' tauri: https://tauri.localhost https://*.tauri.localhost asset: sidex-asset:'
+		: '');
 
 /**
  * Construct a uri that can load resources inside a webview
@@ -40,7 +42,12 @@ export const webviewGenericCspSource =
  * @param remoteInfo Optional information about the remote that specifies where `resource` should be resolved from.
  */
 export function asWebviewUri(resource: URI, remoteInfo?: WebviewRemoteInfo): URI {
-	if (resource.scheme === Schemas.http || resource.scheme === Schemas.https || resource.scheme === Schemas.tauri) {
+	if (
+		resource.scheme === Schemas.http ||
+		resource.scheme === Schemas.https ||
+		resource.scheme === Schemas.tauri ||
+		resource.scheme === 'sidex-asset'
+	) {
 		return resource;
 	}
 
@@ -50,6 +57,15 @@ export function asWebviewUri(resource: URI, remoteInfo?: WebviewRemoteInfo): URI
 			authority: remoteInfo.authority,
 			path: resource.path
 		});
+	}
+
+	// Tauri macOS WKWebView skips the webview service worker (controllerchange
+	// often never fires on https://tauri.localhost). vscode-cdn resource URLs
+	// therefore never resolve. Serve local files via the sidex-asset protocol
+	// registered in src-tauri (same path FileAccess.uriToBrowserUri uses).
+	if ((globalThis as any).__SIDEX_TAURI__ && resource.scheme === Schemas.file) {
+		const encoded = encodeURIComponent(resource.fsPath);
+		return URI.parse(`sidex-asset://localhost/${encoded}`);
 	}
 
 	return URI.from({
