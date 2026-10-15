@@ -25,7 +25,7 @@ import { IInstantiationService } from '../../../../platform/instantiation/common
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { renderMarkdownDocument, DEFAULT_MARKDOWN_STYLES } from './markdownDocumentRenderer.js';
-import { katexStylesheetUri, MarkedKatexSupport } from './markedKatexSupport.js';
+import { katexStylesheetHref, MarkedKatexSupport } from './markedKatexSupport.js';
 
 export const MARKDOWN_PREVIEW_VIEW_TYPE = 'vscode.markdown.preview.editor';
 
@@ -378,6 +378,15 @@ export class MarkdownPreviewManager extends Disposable {
 	}
 
 	private _initInfo(resource: URI, title: string): WebviewInitInfo {
+		const roots: URI[] = [URI.joinPath(resource, '..')];
+		// Same-origin app assets (KaTeX CSS/fonts under /katex) when SW can load them.
+		try {
+			if (typeof window !== 'undefined' && window.location?.origin) {
+				roots.push(URI.parse(window.location.origin));
+			}
+		} catch {
+			/* ignore */
+		}
 		return {
 			title,
 			options: {
@@ -386,7 +395,7 @@ export class MarkdownPreviewManager extends Disposable {
 			},
 			contentOptions: {
 				allowScripts: true,
-				localResourceRoots: [URI.joinPath(resource, '..')]
+				localResourceRoots: roots
 			},
 			extension: undefined
 		};
@@ -640,8 +649,11 @@ export class MarkdownPreviewManager extends Disposable {
 
 		const withImages = rewriteImageSrcs(body, baseDir);
 		const settings = this._getPreviewSettings();
+		// Prefer a same-origin /katex URL. asWebviewUri → vscode-cdn needs the
+		// webview service worker; on macOS WKWebView that SW is skipped so the
+		// CDN URL would 404 and math CSS would never load.
 		const katexStyles = katexExtension
-			? `<link rel="stylesheet" href="${asWebviewUri(katexStylesheetUri()).toString(true)}">`
+			? `<link rel="stylesheet" href="${katexStylesheetHref()}">`
 			: '';
 
 		// Theme colours are injected by the webview host as live `--vscode-*`

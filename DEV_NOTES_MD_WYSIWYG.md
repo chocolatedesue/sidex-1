@@ -113,3 +113,18 @@ See CROSS_VALIDATION_REPORT.md "Dependency + performance pass" and "Release 0.1.
 - Skip re-registering `vscode.markdown.editor` / `vscode.markdown.preview.editor` / PDF remaps from ext-host contributes (picker had duplicates or "(via EmbedPDF)" stubs).
 - Preview viewType → `vscode.markdown.preview.editor`; PDF label → **PDF Preview**.
 - Working marketplace preview plugins still register once and open via resolveCustomEditor bridge.
+
+## 2026-10-15 — macOS blank Markdown Preview
+
+**Root cause (verified in code):** webview host `public/webview-pre/index.html`
+awaited service-worker `controllerchange` before writing preview HTML. On macOS
+Tauri (WKWebView + `https://tauri.localhost` from `useHttpsScheme`) that event
+often never fires → Preview tab blank. Linux/Windows were fine (different
+webview engines / SW behavior).
+
+**Fix:** skip SW when `isSafari`; SW ready timeout + never abort content on SW
+failure; same-origin KaTeX URL; keep `public/webview-pre` synced via postbuild.
+
+**Verify on Mac:** open `.md` → `⌘K` then `V` (or Open Preview to the Side) →
+body text must appear; math (`$x$`) should style if KaTeX assets shipped.
+

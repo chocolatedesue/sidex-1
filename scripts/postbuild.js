@@ -28,6 +28,20 @@ function getFileSizes(dir, extension) {
 	};
 }
 
+// Webview host page ships from public/webview-pre (Vite publicDir), but the
+// editable source of truth is src/vs/workbench/contrib/webview/browser/pre/.
+// Keep dist (and public) in sync so macOS/Tauri builds pick up WKWebView fixes.
+const WEBVIEW_PRE_SRC = path.join('src', 'vs', 'workbench', 'contrib', 'webview', 'browser', 'pre');
+const WEBVIEW_PRE_PUBLIC = path.join('public', 'webview-pre');
+const WEBVIEW_PRE_DIST = path.join(DIST_DIR, 'webview-pre');
+if (fs.existsSync(WEBVIEW_PRE_SRC)) {
+	fs.cpSync(WEBVIEW_PRE_SRC, WEBVIEW_PRE_PUBLIC, { recursive: true, force: true });
+	fs.cpSync(WEBVIEW_PRE_SRC, WEBVIEW_PRE_DIST, { recursive: true, force: true });
+	console.log('Post-build: synced webview-pre (src → public + dist)\n');
+} else {
+	console.warn('Post-build: webview-pre source missing — packaged webviews may be stale\n');
+}
+
 // Copy extensions
 if (fs.existsSync('extensions')) {
 	fs.cpSync('extensions', path.join(DIST_DIR, 'extensions'), { recursive: true, force: true });
