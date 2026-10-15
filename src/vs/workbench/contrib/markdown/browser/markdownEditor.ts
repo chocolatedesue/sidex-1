@@ -492,6 +492,8 @@ export class MarkdownEditorManager extends Disposable {
 		const nonce = generateUuid().replace(/-/g, '');
 		const highlightActiveBlock =
 			this._configurationService.getValue<boolean>('markdown.editor.highlightActiveBlock') ?? true;
+		const editorFontSize =
+			this._configurationService.getValue<number>('editor.fontSize') ?? 14;
 		const initialState = encodeInitialState({
 			highlightActiveBlock,
 			taskProgressLabels: {
@@ -520,11 +522,45 @@ export class MarkdownEditorManager extends Disposable {
 	<meta id="vscode-markdown-editor-initial-state" content="${initialState}" />
 	<base href="${baseHref}" />
 	<link rel="stylesheet" href="${styleUri}" />
+	<style>
+		html, body { height: 100%; margin: 0; background: var(--vscode-editor-background, #1e1e1e); color: var(--vscode-editor-foreground, #cccccc); }
+		#editor { min-height: 100%; font-size: ${editorFontSize}px; }
+		#sidex-md-editor-empty {
+			position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+			padding: 24px; box-sizing: border-box; text-align: center;
+			font: ${Math.max(14, editorFontSize)}px/1.5 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+			opacity: 0.9; pointer-events: none; z-index: 1;
+		}
+	</style>
 	<title>Markdown Editor</title>
 </head>
 <body>
+	<div id="sidex-md-editor-empty">预览加载中 / Loading Markdown Editor…<br/><span style="font-size:0.85em;opacity:0.8">若一直空白请升级 SideX，或改用「打开侧边预览」</span></div>
 	<div id="editor"></div>
-	<script nonce="${nonce}" type="module" src="${scriptUri}"></script>
+	<script nonce="${nonce}">
+		(function () {
+			var failText = 'Markdown Editor failed to load. Use Open Preview to the Side, or upgrade SideX.\\n编辑器未加载：请改用「打开侧边预览」或升级 SideX。';
+			window.__sidexMdEditorMarkFailed = function () {
+				var h = document.getElementById('sidex-md-editor-empty');
+				if (h) { h.innerHTML = failText.replace(/\\n/g, '<br/>'); }
+			};
+			setTimeout(function () {
+				var h = document.getElementById('sidex-md-editor-empty');
+				var ed = document.getElementById('editor');
+				if (!h) { return; }
+				if (ed && ed.childElementCount > 0) { h.style.display = 'none'; return; }
+				window.__sidexMdEditorMarkFailed();
+			}, 8000);
+			var obs = new MutationObserver(function () {
+				var ed = document.getElementById('editor');
+				var h = document.getElementById('sidex-md-editor-empty');
+				if (ed && h && ed.childElementCount > 0) { h.style.display = 'none'; obs.disconnect(); }
+			});
+			var ed = document.getElementById('editor');
+			if (ed) { obs.observe(ed, { childList: true, subtree: true }); }
+		})();
+	</script>
+	<script nonce="${nonce}" type="module" src="${scriptUri}" onerror="window.__sidexMdEditorMarkFailed && window.__sidexMdEditorMarkFailed()"></script>
 </body>
 </html>`;
 	}

@@ -12,7 +12,13 @@
 		content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 </head>
 
-<body style="margin: 0; overflow: hidden; width: 100%; height: 100%; overscroll-behavior-x: none;" role="document">
+<body style="margin: 0; overflow: hidden; width: 100%; height: 100%; overscroll-behavior-x: none; background: var(--vscode-editor-background, #1e1e1e); color: var(--vscode-editor-foreground, #cccccc);" role="document">
+	<div id="sidex-webview-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;text-align:center;font:15px/1.5 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;pointer-events:none;z-index:0;">
+		<div style="max-width:28rem;opacity:0.85;">
+			<div style="font-size:16px;margin-bottom:8px;">预览加载中… / Loading preview…</div>
+			<div style="font-size:13px;opacity:0.75;">若一直空白，请升级 SideX 或改用「打开侧边预览」。<br/>If this stays blank, upgrade SideX or use Open Preview to the Side.</div>
+		</div>
+	</div>
 	<script async type="module">
 		// @ts-check
 		/// <reference lib="dom" />
@@ -43,6 +49,20 @@
 		// Apple WebKit; Linux WebKitGTK typically has an empty vendor and keeps SW.
 		const disableServiceWorkerRuntime = disableServiceWorker || !serviceWorkerProtocolSupported || isSafari;
 		const expectedWorkerVersion = parseInt(searchParams.get('swVersion'));
+
+		// If the host never receives content (e.g. SW hang on older builds), make the
+		// blank pane self-explanatory instead of pure black.
+		setTimeout(() => {
+			const hint = document.getElementById('sidex-webview-empty');
+			if (!hint || hint.style.display === 'none') {
+				return;
+			}
+			if (document.getElementById('active-frame')) {
+				hint.style.display = 'none';
+				return;
+			}
+			hint.innerHTML = '<div style="max-width:28rem;opacity:0.9;"><div style="font-size:16px;margin-bottom:8px;">预览未加载 / Preview did not load</div><div style="font-size:13px;opacity:0.8;">内容迟迟未到达。请升级 SideX，或清除缓存后重试（~/Library/Caches/dev.sidex.app）。<br/>Content never arrived. Upgrade SideX, or clear ~/Library/Caches/dev.sidex.app and retry.</div></div>';
+		}, 8000);
 
 		/**
 		 * @param {string} name
@@ -1165,6 +1185,10 @@
 							applyStyles(newFrame.contentDocument, newFrame.contentDocument.body);
 						}
 						newFrame.setAttribute('id', 'active-frame');
+						const emptyHint = document.getElementById('sidex-webview-empty');
+						if (emptyHint) {
+							emptyHint.style.display = 'none';
+						}
 						newFrame.style.visibility = 'visible';
 
 						contentWindow.addEventListener('scroll', handleInnerScroll);

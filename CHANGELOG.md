@@ -1,3 +1,10 @@
+## Unreleased
+
+### Fixed / Improved
+- Markdown Preview default `markdown.preview.fontSize` raised to **16**; macOS `editor.fontSize` default raised to **14** for readability.
+- Webview host and Markdown Editor show a bilingual empty/loading hint instead of a pure black pane when content is slow or fails to load.
+- Markdown Preview relative image `src` encoding uses `toString(true)` for safer `sidex-asset` URLs.
+
 # Changelog
 
 ## Unreleased — macOS Markdown Preview blank fix

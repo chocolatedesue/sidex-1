@@ -65,7 +65,7 @@ function rewriteImageSrcs(html: string, baseDir: URI): string {
 			}
 			const resolved = resolveMarkdownUri(baseDir, src);
 			const webviewSafe = asWebviewUri(resolved);
-			return `<img ${before}src="${webviewSafe.toString()}"${after}>`;
+			return `<img ${before}src="${webviewSafe.toString(true)}"${after}>`;
 		}
 	);
 }
@@ -717,7 +717,7 @@ export class MarkdownPreviewManager extends Disposable {
 
 	private _getPreviewSettings() {
 		const config = this._configurationService;
-		const fontSize = config.getValue<number>('markdown.preview.fontSize') ?? 14;
+		const fontSize = config.getValue<number>('markdown.preview.fontSize') ?? 16;
 		const lineHeight = config.getValue<number>('markdown.preview.lineHeight') ?? 1.6;
 		const fontFamily =
 			config.getValue<string>('markdown.preview.fontFamily') ??

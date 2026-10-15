@@ -477,7 +477,7 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
 		},
 		'markdown.preview.fontSize': {
 			type: 'number',
-			default: 14,
+			default: 16,
 			description: localize('markdown.preview.fontSize', 'Font size in pixels for the Markdown preview.'),
 			scope: ConfigurationScope.RESOURCE
 		},
