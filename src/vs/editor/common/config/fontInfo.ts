@@ -251,7 +251,7 @@ export const EDITOR_FONT_DEFAULTS = {
 			? DEFAULT_WINDOWS_FONT_FAMILY
 			: DEFAULT_LINUX_FONT_FAMILY,
 	fontWeight: 'normal',
-	fontSize: platform.isMacintosh ? 12 : 14,
+	fontSize: 14, // SideX: readable default (was 12 on macOS)
 	lineHeight: 0,
 	letterSpacing: 0
 };
