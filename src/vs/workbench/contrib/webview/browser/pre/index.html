@@ -5,7 +5,7 @@
 	<meta charset="UTF-8">
 
 	<meta http-equiv="Content-Security-Policy"
-		content="default-src 'none'; script-src 'sha256-TaWGDzV7c9rUH2q/5ygOyYUHSyHIqBMYfucPh3lnKvU=' 'self' https://tauri.localhost https://*.tauri.localhost; frame-src 'self' https://tauri.localhost https://*.tauri.localhost; style-src 'unsafe-inline'; img-src 'self' https: data: blob: https://tauri.localhost https://*.tauri.localhost asset:; font-src 'self' https: data: https://tauri.localhost; connect-src 'self' https://tauri.localhost https://*.tauri.localhost ws://localhost:*;">
+		content="default-src 'none'; script-src 'unsafe-inline' 'self' https://tauri.localhost https://*.tauri.localhost; frame-src 'self' https://tauri.localhost https://*.tauri.localhost; style-src 'unsafe-inline'; img-src 'self' https: data: blob: https://tauri.localhost https://*.tauri.localhost asset:; font-src 'self' https: data: https://tauri.localhost; connect-src 'self' https://tauri.localhost https://*.tauri.localhost ws: wss:;">
 
 	<!-- Disable pinch zooming -->
 	<meta name="viewport"
@@ -35,7 +35,13 @@
 		const onElectron = searchParams.get('platform') === 'electron';
 		const disableServiceWorker = searchParams.has('disableServiceWorker');
 		const serviceWorkerProtocolSupported = location.protocol === 'http:' || location.protocol === 'https:';
-		const disableServiceWorkerRuntime = disableServiceWorker || !serviceWorkerProtocolSupported;
+		// Tauri on macOS uses WKWebView (Safari engine). With useHttpsScheme the
+		// origin is https://tauri.localhost, so the host *tries* to register a
+		// service worker. WKWebView often never fires controllerchange for that
+		// host, workerReady never resolves, and setHtml content is never written
+		// — Markdown Preview (and every other webview) stays blank. Skip SW on
+		// Apple WebKit; Linux WebKitGTK typically has an empty vendor and keeps SW.
+		const disableServiceWorkerRuntime = disableServiceWorker || !serviceWorkerProtocolSupported || isSafari;
 		const expectedWorkerVersion = parseInt(searchParams.get('swVersion'));
 
 		/**
@@ -248,9 +254,15 @@
 		}
 
 		/** @type {Promise<void>} */
-		const workerReady = new Promise((resolve, reject) => {
+		const workerReady = new Promise((resolve, _reject) => {
+			const reject = (err) => {
+				console.warn(err instanceof Error ? err.message : String(err));
+				resolve(); // still render HTML; local vscode-resource loads may be unavailable
+			};
 			if (disableServiceWorkerRuntime) {
-				if (!disableServiceWorker && !serviceWorkerProtocolSupported) {
+				if (isSafari && serviceWorkerProtocolSupported && !disableServiceWorker) {
+					console.warn('Safari/WKWebView: webview service worker disabled so Markdown Preview and other panels can render (controllerchange often never fires on https://tauri.localhost).');
+				} else if (!disableServiceWorker && !serviceWorkerProtocolSupported) {
 					console.warn(`Service workers are not supported for protocol ${location.protocol}. Webview runs with service workers disabled.`);
 				}
 				return resolve();
@@ -326,6 +338,12 @@
 					}
 					return reject(new Error(`Could not register service worker: ${error}.`));
 				});
+
+			// Never block content forever if controllerchange never arrives (non-Safari WebKit, etc.).
+			setTimeout(() => {
+				console.warn('Webview service worker ready timed out; continuing so preview content can render.');
+				resolve();
+			}, 2500);
 		});
 
 		/**
@@ -1000,9 +1018,9 @@
 					await workerReady;
 					perfMark('content/workerReady');
 				} catch (e) {
-					console.error(`Webview fatal error: ${e}`);
+					// Do not abort: a SW failure used to leave Markdown Preview blank forever.
+					console.warn(`Webview service worker issue (continuing): ${e}`);
 					hostMessaging.postMessage('fatal-error', { message: e + '' });
-					return;
 				}
 
 				if (currentUpdateId !== updateId) {

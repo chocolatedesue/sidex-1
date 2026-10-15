@@ -181,8 +181,14 @@ export class MarkedKatexSupport {
  * that the renderer itself is bundled.
  */
 export function katexStylesheetHref(): string {
-	const base = import.meta.env.DEV ? 'vs/../../node_modules/katex/dist' : 'vs/../../katex';
-	return FileAccess.asBrowserUri(`${base}/katex.min.css` as AppResourcePath).toString(true);
+	if (import.meta.env.DEV) {
+		return FileAccess.asBrowserUri('vs/../../node_modules/katex/dist/katex.min.css' as AppResourcePath).toString(true);
+	}
+	// Production: postbuild copies katex next to the app (`dist/katex`). Prefer an
+	// origin-absolute URL so Markdown Preview webviews (esp. macOS WKWebView with
+	// the service worker skipped) can load the stylesheet without vscode-resource.
+	const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
+	return `${origin}/katex/katex.min.css`;
 }
 
 /** {@link katexStylesheetHref} as a URI (webviews need one for `asWebviewUri`). */

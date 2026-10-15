@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased — macOS Markdown Preview blank fix
+
+### Fixed
+- **macOS: built-in Markdown Preview stayed blank.** Tauri on Mac uses WKWebView.
+  After restoring `useHttpsScheme` (so the origin is `https://tauri.localhost`), the
+  webview host tried to register a service worker and waited forever for
+  `controllerchange`, which WKWebView often never fires for that host. `setHtml`
+  content was never written, so Preview / Markdown Editor panes stayed empty.
+  The host now **skips the service worker on Safari/WKWebView**, times out SW
+  readiness elsewhere, and continues rendering even if SW setup fails.
+- **KaTeX stylesheet in Preview** now uses a same-origin `/katex/...` URL so math
+  CSS loads without the vscode-resource service worker (needed on Mac after the
+  SW skip).
+- **`public/webview-pre` drifted from source** — packaged builds serve `public/`.
+  Synced and `postbuild` now copies `src/.../webview/browser/pre` → `public` + `dist`.
+
+### Tests
+- `npm run smoke:macos-md-preview` (also part of `npm test`)
+
+
 ## 0.1.13 — 2026-10-14
 
 ### Fixed
